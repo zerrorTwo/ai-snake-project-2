@@ -14,16 +14,18 @@ class Snake(object):
         self.color = (240, 240, 240)
         self.snake_tail = (0, 0)
 
-    #Hàm dùng để láy 
+    #Hàm dùng để lấy phần đầu con rắn
     def head_position(self):
         return self.coords[0]
 
+    # Hàm để đổi hướng con rắn
     def snake_turn(self, point):
         if self.length > 1 and (point[0] * -1, point[1] * -1) == self.direction:
             return
         else:
             self.direction = point
 
+    # Hàm di chuyển
     def move(self):
         cur = self.head_position()
         x, y = self.direction
@@ -53,6 +55,7 @@ class Snake(object):
         self.direction = random.choice([UP, DOWN, LEFT, RIGHT])
         score = 0
     
+    # GUI cho con rắn
     def draw(self, surface):
         for index, p in enumerate(self.coords):
             r = pygame.Rect((p[0], p[1]), (GRIDSIZE, GRIDSIZE))
@@ -67,6 +70,7 @@ class Snake(object):
             pygame.draw.rect(surface, (abs(240 - 4*index), abs(240 - 4*index), abs(240 - 4*index)), r)
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
 
+    # xử lí tác vụ người chơi 
     def user_key(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -82,15 +86,18 @@ class Snake(object):
                 elif event.key == pygame.K_RIGHT:
                     self.snake_turn(RIGHT)
 
+# Lớp đồ ăn
 class Food(object):
     def __init__(self):
         self.position = (0, 0)
         self.color = (161, 238, 189)
         self.random_pos()
 
+    # hàm lấy vị trí 
     def get_position(self):
         return self.position
 
+    # Hàm spawn đồ ăn với điều kiện nằm trong bảng và tránh con rắn
     def random_pos(self):
         grid[int(self.position[1]/GRIDSIZE), int(self.position[0]/GRIDSIZE)] = 0
         self.position = (random.randint(0, GRID_WIDTH-1) * GRIDSIZE, random.randint(0, GRID_HEIGHT-1) * GRIDSIZE)
@@ -107,6 +114,7 @@ class Food(object):
     def get_position(self):
         return self.position
 
+# Hàm đẻ vẽ các ô trên bảng
 def draw_grid(surface, myfont):
     for y in range(0, int(GRID_HEIGHT)):
         for x in range(0, int(GRID_WIDTH)):
@@ -121,6 +129,7 @@ def draw_grid(surface, myfont):
                 text = myfont.render(str((x, y)), 1, (0, 0, 0))
                 # surface.blit(text, ((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE)))
 
+# lớp Node để sử lý thuật toán
 class Node():
     def __init__(self, position, parent = None):
         self.position = (int(position[0]), int(position[1]))
@@ -138,6 +147,7 @@ class Node():
     def get_parent(self):
         return self.parent
 
+    # đi tìm các vị trí có thể di chuyển
     def get_neighbors(self):
         #returns neighbors (UP, RIGHT, DOWN, LEFT)
         #THIS DOES NOT MEAN THE NEIGHBORING coords ARE not obstacles
@@ -192,6 +202,7 @@ class Node():
             node = node.parent
         return list
 
+# hàm kiểm tra con rắn có đụng vào đuôi không
 def check_collision(nodes):
         return_bools = []
         for node in nodes:
@@ -199,6 +210,7 @@ def check_collision(nodes):
             
         return return_bools
 
+# Hàm thuật toán dfs
 def dfs(start_pos, goal_pos):
     #fake stack đẻ chạy thuật toán
     open_list = []
@@ -240,7 +252,8 @@ def dfs(start_pos, goal_pos):
                 open_list.insert(0, child) # thêm vào đầu danh sách
     
     return None
-        
+
+# hàm thuật toán bfs
 def bfs(start_pos, goal_pos):
     #fake queue đẻ chạy thuật toán
     open_list = []
@@ -352,6 +365,7 @@ grid_game_reset()
 
 directions = []
 
+# Hàm để dịch chuyển con rắn khi di chuyển
 def snake_add_direction(path):
     directions = []
 
@@ -360,6 +374,7 @@ def snake_add_direction(path):
         directions.insert(0,direction_vector)
     return directions
 
+# hàm xử lí khi con rắn chớt
 def snake_dead():
     snake.reset_game()
     grid_game_reset()
@@ -411,6 +426,7 @@ def main():
         start_pos = (snake.head_position()[0]/GRIDSIZE, snake.head_position()[1]/GRIDSIZE)
         food_pos = (food.get_position()[0] / GRIDSIZE, food.get_position()[1]/GRIDSIZE)
 
+        # Xử lí thuật toán ở đây
         path = dfs(start_pos, food_pos)
         print(path)
         snake_dir = snake_add_direction(path).pop()
