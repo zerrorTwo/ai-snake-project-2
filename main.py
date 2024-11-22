@@ -1,109 +1,130 @@
-import pygame
+#C:/Users/NAM/AppData/Local/Programs/Python/Python313/python.exe D:\SPKT\AI\FolderMainSnake\ai-snake-project-2\test.py 
+import pygame  # type: ignore
 import sys
 import random
 import heapq
-import numpy as np
-from pygame.display import update
+import numpy as np # type: ignore # type: ignore
+from pygame.display import update # type: ignore
 from env import *
+
+class Obstacle(object):
+    def __init__(self):
+        self.positions = []
+        self.color = (255, 0, 0)  # Màu đỏ cho chướng ngại vật
+        self.randomize_positions()
+
+    def randomize_positions(self):
+        # Tạo một số lượng chướng ngại vật ngẫu nhiên
+        self.positions = []
+        for _ in range(10):  # Tạo 5 chướng ngại vật
+            x = random.randint(0, GRID_WIDTH - 1) * GRIDSIZE
+            y = random.randint(0, GRID_HEIGHT - 1) * GRIDSIZE
+            self.positions.append((x, y))
+
+    def draw(self, surface):
+        for pos in self.positions:
+            r = pygame.Rect((pos[0], pos[1]), (GRIDSIZE, GRIDSIZE))
+            pygame.draw.rect(surface, self.color, r)
+
+    def check_collision(self, position):
+        return position in self.positions
 
 class Snake(object):
     def __init__(self):
         self.length = 1 # chiều dài ban đầu bằng 0
-        self.coords = [((SCREEN_WIDTH / 2), (SCREEN_HEIGHT / 2))] # xuất hiện giữa bảng
+        self.positions = [((SCREEN_WIDTH / 2), (SCREEN_HEIGHT / 2))] # xuất hiện giữa bảng
         self.direction = random.choice([UP, DOWN, LEFT, RIGHT]) # các hướng con rắn có thể di chuyển
         self.color = (240, 240, 240)
-        self.snake_tail = (0, 0)
+        self.tail = (0, 0)
 
-    #Hàm dùng để lấy phần đầu con rắn
-    def head_position(self):
-        return self.coords[0]
+    #Hàm dùng để láy 
+    def get_head_position(self):
+        return self.positions[0]
 
-    # Hàm để đổi hướng con rắn
-    def snake_turn(self, point):
+    def turn(self, point):
         if self.length > 1 and (point[0] * -1, point[1] * -1) == self.direction:
             return
         else:
             self.direction = point
 
-    # Hàm di chuyển
     def move(self):
-        cur = self.head_position()
+        cur = self.get_head_position()
         x, y = self.direction
         new = (((cur[0] + (x*GRIDSIZE))), (cur[1] + (y*GRIDSIZE)))
-        if (len(self.coords) > 2 and new in self.coords[2:-1]) or new[0] == -GRIDSIZE or new[1] == -GRIDSIZE or new[0] == SCREEN_WIDTH or new[1] == SCREEN_HEIGHT:
-            self.reset_game()
-            grid_game_reset()
-            food.random_pos()
+
+        if cur in obs.positions or new[0] < 0 or new[1] < 0 or new[0] >= SCREEN_WIDTH or new[1] >= SCREEN_HEIGHT:
+            print('YOU ARE DEAD')
+            dead(score)
+
+        if (len(self.positions) > 2 and new in self.positions[2:-1]) or new[0] == -GRIDSIZE or new[1] == -GRIDSIZE or new[0] == SCREEN_WIDTH or new[1] == SCREEN_HEIGHT:
+            self.reset()
+            reset_grid()
+            food.randomize_position()
         else:
             
-            for i in self.coords:
+            for i in self.positions:
                 grid[int(i[1] / GRIDSIZE), int(i[0] / GRIDSIZE)] = 1
             
             grid[int(new[1] / GRIDSIZE), int(new[0] / GRIDSIZE)] = 3
             
-            if len(self.coords) + 1 > self.length:
-                old = self.coords.pop()
+            if len(self.positions) + 1 > self.length:
+                old = self.positions.pop()
                 grid[int(old[1] / GRIDSIZE), int(old[0] / GRIDSIZE)] = 0
-            self.coords.insert(0, new)
-            grid[int(self.coords[-1][1] / GRIDSIZE), int(self.coords[-1][0] / GRIDSIZE)] = 4
-            self.snake_tail = self.coords[-1]
+            self.positions.insert(0, new)
+            grid[int(self.positions[-1][1] / GRIDSIZE), int(self.positions[-1][0] / GRIDSIZE)] = 4
+            self.tail = self.positions[-1]
 
-    def reset_game(self):
+    def reset(self):
         global score
         self.length = 1
-        self.coords = [((SCREEN_WIDTH / 2), (SCREEN_HEIGHT / 2))]
+        self.positions = [((SCREEN_WIDTH / 2), (SCREEN_HEIGHT / 2))]
         self.direction = random.choice([UP, DOWN, LEFT, RIGHT])
         score = 0
     
-    # GUI cho con rắn
     def draw(self, surface):
-        for index, p in enumerate(self.coords):
+        for index, p in enumerate(self.positions):
             r = pygame.Rect((p[0], p[1]), (GRIDSIZE, GRIDSIZE))
             if index == 0:
-                pygame.draw.rect(surface, (254, 110, 26), r)
+                pygame.draw.rect(surface, (230, 0, 255), r)
                 pygame.draw.rect(surface, (93, 216, 228), r, 1)
                 continue
             if index == snake.length - 1:
-                pygame.draw.rect(surface, (150, 148, 255), r)
+                pygame.draw.rect(surface, (0, 230, 255), r)
                 pygame.draw.rect(surface, (93, 216, 228), r, 1)
                 continue
             pygame.draw.rect(surface, (abs(240 - 4*index), abs(240 - 4*index), abs(240 - 4*index)), r)
             pygame.draw.rect(surface, (93, 216, 228), r, 1)
 
-    # xử lí tác vụ người chơi 
-    def user_key(self):
+    def handle_keys(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
-                    self.snake_turn(UP)
+                    self.turn(UP)
                 elif event.key == pygame.K_DOWN:
-                    self.snake_turn(DOWN)
+                    self.turn(DOWN)
                 elif event.key == pygame.K_LEFT:
-                    self.snake_turn(LEFT)
+                    self.turn(LEFT)
                 elif event.key == pygame.K_RIGHT:
-                    self.snake_turn(RIGHT)
-
-# Lớp đồ ăn
+                    self.turn(RIGHT)
 class Food(object):
     def __init__(self):
         self.position = (0, 0)
-        self.color = (161, 238, 189)
-        self.random_pos()
+        self.color = (114, 137, 218)
+        self.randomize_position()
 
-    # hàm lấy vị trí 
     def get_position(self):
         return self.position
 
-    # Hàm spawn đồ ăn với điều kiện nằm trong bảng và tránh con rắn
-    def random_pos(self):
+    def randomize_position(self):
         grid[int(self.position[1]/GRIDSIZE), int(self.position[0]/GRIDSIZE)] = 0
         self.position = (random.randint(0, GRID_WIDTH-1) * GRIDSIZE, random.randint(0, GRID_HEIGHT-1) * GRIDSIZE)
-        #if the 
-        if self.position in snake.coords:
-            self.random_pos() #recursive call
+        if self.position in snake.positions:
+            self.randomize_position() #recursive call
+        if self.position in obs.positions:
+            self.randomize_position() #recursive call
         grid[int(self.position[1]/GRIDSIZE), int(self.position[0]/GRIDSIZE)] = 2
 
     def draw(self, surface):
@@ -114,50 +135,37 @@ class Food(object):
     def get_position(self):
         return self.position
 
-# Hàm đẻ vẽ các ô trên bảng
-def draw_grid(surface, myfont):
-    for y in range(0, int(GRID_HEIGHT)):
-        for x in range(0, int(GRID_WIDTH)):
-            if (x + y) % 2 == 0:
-                r = pygame.Rect((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE))
-                pygame.draw.rect(surface, (44, 47, 51), r)
-                text = myfont.render(str((x, y)), 1, (0, 0, 0))
-                # surface.blit(text, ((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE)))
-            else:
-                rr = pygame.Rect((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE))
-                pygame.draw.rect(surface, (35, 39, 42), rr)
-                text = myfont.render(str((x, y)), 1, (0, 0, 0))
-                # surface.blit(text, ((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE)))
-
-# lớp Node để sử lý thuật toán
 class Node():
     def __init__(self, position, parent = None):
         self.position = (int(position[0]), int(position[1]))
-        #parent is the parent node
+        self.g_cost = float('inf')  
+        self.h_cost = float('inf')  
+        self.f_cost = float('inf') 
         self.parent = parent
     
-    # Compare Nodes
     def __eq__(self, other):
         return self.position == other.position
+    
+    def __lt__(self, other):
+        # Compare nodes based on f_cost
+        return self.f_cost < other.f_cost
 
-    # Print Nodes
     def __repr__(self):
         return str(self.position)
 
     def get_parent(self):
         return self.parent
 
-    # đi tìm các vị trí có thể di chuyển
     def get_neighbors(self):
-        #returns neighbors (UP, RIGHT, DOWN, LEFT)
-        #THIS DOES NOT MEAN THE NEIGHBORING coords ARE not obstacles
         parent_pos = self.position
         x = parent_pos[0]
         y = parent_pos[1]
-
         children = []
         for new_position in [UP, RIGHT, DOWN, LEFT]:
             node_position = (self.position[0] + new_position[0], self.position[1] + new_position[1])
+            x, y = node_position
+            if (x* GRIDSIZE, y* GRIDSIZE) in obs.positions:
+                continue
             temp = self
             broken = False
             while temp is not None:
@@ -175,19 +183,22 @@ class Node():
             children.append(new_node)
         return children
 
-    def check_on_grid(self):
+    def on_grid(self):
         x = self.position[0]
         y = self.position[1]
         return (x >= GRID_WIDTH or x < 0 or y >= GRID_HEIGHT or y < 0)
     
-    def check_snake_node(self, snake):
+    def is_snake_node(self, snake):
         x = self.position[0]
         y = self.position[1]
-        
-        for pos in snake.coords:
+        for pos in snake.positions:
             if (pos[0] == x and pos[1] == y):
                 return True
         return False
+    
+    def is_obstacle_node(self, obs):
+        return self.position in obs.positions
+
     
     def get_position(self):
         return self.position
@@ -195,120 +206,40 @@ class Node():
     def listify(self):
         list = []
         list.insert(0, self.position)
-
         node = self.parent
         while node is not None:
             list.insert(0, node.position)
             node = node.parent
         return list
+    def __hash__(self):
+        return hash(self.position)
 
-# hàm kiểm tra con rắn có đụng vào đuôi không
-def check_collision(nodes):
-        return_bools = []
-        for node in nodes:
-            return_bools.append(node.check_on_grid() and (not node.check_snake_node))
-            
-        return return_bools
+def drawGrid(surface, myfont):
+    for y in range(0, int(GRID_HEIGHT)):
+        for x in range(0, int(GRID_WIDTH)):
+            if (x + y) % 2 == 0:
+                r = pygame.Rect((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE))
+                pygame.draw.rect(surface, (44, 47, 51), r)
+            else:
+                rr = pygame.Rect((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE))
+                pygame.draw.rect(surface, (35, 39, 42), rr)
 
-# Hàm thuật toán dfs
-def dfs(start_pos, goal_pos):
-    #fake stack đẻ chạy thuật toán
-    open_list = []
-    #mảng lưu các vị trí đã đi qua
-    visited = []
 
-    start_node = Node(start_pos)
-    goal_node = Node(goal_pos)
-
-    open_list.append(start_node)
-
-    while (len(open_list) != 0):
-        current_node = open_list.pop(-1) # lấy phần tử cuối mảng theo stack Last in first out 
-
-        visited.append(current_node)
-        
-        if (current_node == goal_node):
-            path = []
-            while current_node != start_node:
-                path.append(current_node.get_position())
-                current_node = current_node.get_parent()
-            #code before wouldnt insert start node into path so i added it here
-            path.append(start_node.get_position())
-
-            return path[::-1]
-
-        cur_x = (start_node.get_position())[0]
-        cur_y = (start_node.get_position())[1]
-        goal_x = goal_node.get_position()[0]
-        goal_y = goal_node.get_position()[1]
-
-        current_node_neighbors = current_node.get_neighbors()
-
-        for child in current_node_neighbors:
-            if child in visited:
-                continue
-
-            if child not in open_list:
-                open_list.insert(0, child) # thêm vào đầu danh sách
-    
-    return None
-
-# hàm thuật toán bfs
-def bfs(start_pos, goal_pos):
-    #fake queue đẻ chạy thuật toán
-    open_list = []
-    #mảng lưu các vị trí đã đi qua
-    visited = []
-
-    start_node = Node(start_pos)
-    goal_node = Node(goal_pos)
-
-    open_list.append(start_node)
-
-    while len(open_list) != 0:
-        current_node = open_list.pop(0)  # Lấy phần tử đầu tiên trong danh sách (thay vì phần tử cuối trong DFS)
-
-        visited.append(current_node)
-        
-        if current_node == goal_node:
-            path = []
-            while current_node != start_node:
-                path.append(current_node.get_position())
-                current_node = current_node.get_parent()
-            path.append(start_node.get_position())
-
-            return path[::-1]
-
-        cur_x = (start_node.get_position())[0]
-        cur_y = (start_node.get_position())[1]
-        goal_x = goal_node.get_position()[0]
-        goal_y = goal_node.get_position()[1]
-
-        current_node_neighbors = current_node.get_neighbors()
-
-        for child in current_node_neighbors:
-            # Nếu nút là vật cản hoặc đã có trong visited thì bỏ qua
-            if child in visited:
-                continue
-
-            # Nếu nút chưa có trong open_list, thêm vào open_list
-            if child not in open_list:
-                open_list.append(child)
-
-    return None
+def heuristic(node, goal_node):
+        return abs(node.get_position()[0] - goal_node.get_position()[0]) + \
+               abs(node.get_position()[1] - goal_node.get_position()[1])
 
 
 def a_star(start_pos, goal_pos):
     open_list = []  # Danh sách các nút cần xét
     visited = []  # Danh sách các nút đã xét
     
+
     start_node = Node(start_pos)
     goal_node = Node(goal_pos)
     
     # Hàm heuristic, tính khoảng cách Manhattan giữa hai điểm
-    def heuristic(node, goal_node):
-        return abs(node.get_position()[0] - goal_node.get_position()[0]) + \
-               abs(node.get_position()[1] - goal_node.get_position()[1])
+    
 
     # Dùng heapq để làm danh sách open_list, mỗi phần tử là một tuple (f(n), node)
     heapq.heappush(open_list, (0 + heuristic(start_node, goal_node), start_node))  # f(n) = g(n) + h(n)
@@ -356,17 +287,99 @@ def a_star(start_pos, goal_pos):
 
     return None  # Nếu không tìm được đường đi
 
-def grid_game_reset():
+def dfs(start_pos, goal_pos):
+    open_list = []
+    closed_list = []
+    start_node = Node(start_pos)
+    goal_node = Node(goal_pos)
+    open_list.append(start_node)
+    while (len(open_list) != 0):
+        cur_node = open_list.pop(-1)
+        closed_list.append(cur_node)
+        if (cur_node == goal_node):
+            path = []
+            while cur_node != start_node:
+                path.append(cur_node.get_position())
+                cur_node = cur_node.get_parent()
+            path.append(start_node.get_position())
+
+            return path[::-1]
+
+        cur_x = (start_node.get_position())[0]
+        cur_y = (start_node.get_position())[1]
+        goal_x = goal_node.get_position()[0]
+        goal_y = goal_node.get_position()[1]
+
+        cur_node_neighbors = cur_node.get_neighbors()
+        
+
+        for child in cur_node_neighbors:
+            x, y = child.get_position()
+            if (((x*GRIDSIZE, y* GRIDSIZE)) in obs.positions):
+                continue
+            if child in closed_list:
+                continue  
+
+            if child not in open_list:
+                open_list.insert(0, child)
+    
+    return None
+
+def bfs(start_pos, goal_pos):
+    #fake queue đẻ chạy thuật toán
+    open_list = []
+    #mảng lưu các vị trí đã đi qua
+    visited = []
+
+    start_node = Node(start_pos)
+    goal_node = Node(goal_pos)
+
+    open_list.append(start_node)
+
+    while len(open_list) != 0:
+        current_node = open_list.pop(0)  # Lấy phần tử đầu tiên trong danh sách (thay vì phần tử cuối trong DFS)
+
+        visited.append(current_node)
+        
+        if current_node == goal_node:
+            path = []
+            while current_node != start_node:
+                path.append(current_node.get_position())
+                current_node = current_node.get_parent()
+            path.append(start_node.get_position())
+
+            return path[::-1]
+
+        cur_x = (start_node.get_position())[0]
+        cur_y = (start_node.get_position())[1]
+        goal_x = goal_node.get_position()[0]
+        goal_y = goal_node.get_position()[1]
+
+        current_node_neighbors = current_node.get_neighbors()
+
+        for child in current_node_neighbors:
+            # Nếu nút là vật cản hoặc đã có trong visited thì bỏ qua
+            if child in visited:
+                continue
+
+            # Nếu nút chưa có trong open_list, thêm vào open_list
+            if child not in open_list:
+                open_list.append(child)
+
+    return None
+
+def reset_grid():
     global grid
     grid = np.zeros((GRID_WIDTH, GRID_HEIGHT))
     grid = grid.astype(int)
 
-grid_game_reset()
+reset_grid()
 
 directions = []
 
-# Hàm để dịch chuyển con rắn khi di chuyển
-def snake_add_direction(path):
+def snake_directions(path):
+    if path is None:
+        dead(score)
     directions = []
 
     for i in range(len(path) - 1):
@@ -374,71 +387,199 @@ def snake_add_direction(path):
         directions.insert(0,direction_vector)
     return directions
 
-# hàm xử lí khi con rắn chớt
-def snake_dead():
-    snake.reset_game()
-    grid_game_reset()
-    food.random_pos()
-    while True:
+def dead(score):
+    # Reset the game state
+    snake.reset()
+    reset_grid()
+    food.randomize_position()
+    menu()
+    # # Set up fonts and colors
+    # font = pygame.font.Font(None, 50)
+    # button_font = pygame.font.Font(None, 40)
+    # white = (255, 255, 255)
+    # red = (183, 224, 255)
+
+    # while True:
+    #     # Display the score
+    #     score_text = font.render(f"Your Score: {score}", True, white)
+    #     score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+    #     screen.blit(score_text, score_rect)
+
+    #     # Display the restart button
+    #     button_text = button_font.render("Restart", True, white)
+    #     button_rect = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2), (200, 50))
+    #     pygame.draw.rect(screen, red, button_rect)
+    #     screen.blit(button_text, button_text.get_rect(center=button_rect.center))
+
+    #     pygame.display.flip()  # Update the display
+
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             pygame.quit()
+    #             sys.exit()
+    #         if event.type == pygame.MOUSEBUTTONDOWN:
+    #             if button_rect.collidepoint(event.pos):
+    #                 return  # Return to the main game loop
+
+
+def menu():
+    white = (255, 255, 255)
+    orange = (254, 110, 26)
+
+    # Font chữ
+    button_font = pygame.font.SysFont("monospace", 16, bold=True)
+    running = True
+    while running:
+        # Tạo nút cho thuật toán DFS
+        button_text_dfs = button_font.render("Thuật Toán DFS", True, white)
+        button_dfs = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 80), (200, 50))
+        pygame.draw.rect(screen, orange, button_dfs)
+        screen.blit(button_text_dfs, button_text_dfs.get_rect(center=button_dfs.center))
+
+        # Tạo nút cho thuật toán DFS
+        button_text_bsf = button_font.render("Thuật Toán BFS", True, white)
+        button_bsf = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 -20), (200, 50))
+        pygame.draw.rect(screen, orange, button_bsf)
+        screen.blit(button_text_bsf, button_text_bsf.get_rect(center=button_bsf.center))
+
+        # Tạo nút cho thuật toán A*
+        button_text_astar = button_font.render("Thuật Toán A*", True, white)
+        button_astar = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 40), (200, 50))
+        pygame.draw.rect(screen, orange, button_astar)
+        screen.blit(button_text_astar, button_text_astar.get_rect(center=button_astar.center))
+
+        pygame.display.flip()  # Cập nhật màn hình
+
+        # Lắng nghe sự kiện
         for event in pygame.event.get():
-                print(event)
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if button_dfs.collidepoint(event.pos):
+                    thuattoan = 'DFS' # Chọn thuật toán DFS
+                    return thuattoan  # Quay lại với kết quả
+                elif button_astar.collidepoint(event.pos):
+                    thuattoan = 'A*'  # Chọn thuật toán A*
+                    return thuattoan  # Quay lại với kết quả
+                elif button_bsf.collidepoint(event.pos):
+                    thuattoan = 'BFS'  # Chọn thuật toán BFS
+                    return thuattoan  # Quay lại với kết quả
+
+def pause_game():
+    # Tạm dừng game và hiển thị các lựa chọn "Continue" và "Restart"
+    paused = True
+    while paused:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                paused = False  # Thoát khỏi chế độ tạm dừng và tiếp tục game
+
+            # Kiểm tra nếu nhấn vào nút "Continue"
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if continue_button.collidepoint(event.pos):
+                    paused = False  # Tiếp tục game khi chọn "Continue"
+                elif restart_button.collidepoint(event.pos):
+                    paused = False  # Quay lại menu khi chọn "Restart"
+                    screen.fill((255, 246, 233))  # Làm sạch màn hình trước khi quay lại menu
+                    pygame.display.update()  # Cập nhật màn hình
+                    return 'restart'  # Quay lại menu
+
+        # Hiển thị menu tạm dừng
+        screen.fill((0, 0, 0))  # Làm mờ màn hình khi tạm dừng
+        font = pygame.font.SysFont("monospace", 32)
+        text = font.render("Game Paused!", True, (255, 255, 255))
+        screen.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, SCREEN_HEIGHT // 4))
+
+        # Tạo nút "Continue"
+        continue_text = font.render("Continue", True, (255, 255, 255))
+        continue_button = pygame.Rect(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 - 50, 200, 50)
+        pygame.draw.rect(screen, (254, 110, 26), continue_button)
+        screen.blit(continue_text, continue_text.get_rect(center=continue_button.center))
+
+        # Tạo nút "Restart"
+        restart_text = font.render("Restart", True, (255, 255, 255))
+        restart_button = pygame.Rect(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 50, 200, 50)
+        pygame.draw.rect(screen, (254, 110, 26), restart_button)
+        screen.blit(restart_text, restart_text.get_rect(center=restart_button.center))
+
+        pygame.display.update()
+
+def main():
+    global score, food, snake, surface, screen, obs
+    pygame.init()
+    pygame.display.set_caption("Cá chép hoá rồng!!")
+    clock = pygame.time.Clock()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
+    myfont = pygame.font.SysFont("monospace", 16)
+    surface = pygame.Surface(screen.get_size())
+    surface = surface.convert()
+
+    # Hiển thị menu và chọn thuật toán
+    thuattoan = menu()
+
+    while True:
+        # Khởi tạo trạng thái game
+        obs = Obstacle()
+        snake = Snake()
+        food = Food()
+        score = 0
+
+        while True:
+            clock.tick(60)
+            for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+                # Kiểm tra sự kiện phím ESC để tạm dừng game
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    result = pause_game()  # Dừng game và hiển thị menu
 
+                    # Kiểm tra nếu người chơi chọn "Restart"
+                    if result == 'restart':
+                        thuattoan = menu()  # Quay lại menu chính để chọn lại thuật toán
+                        break  # Thoát khỏi vòng lặp game và quay lại menu chính
 
+            # Kiểm tra nếu rắn ăn được thức ăn
+            if snake.get_head_position() == food.get_position():
+                snake.length += 1
+                score = snake.length - 1
+                food.randomize_position()
 
-def main():
-    global score, food, snake, surface, simulated
-    pygame.init()
+            # Vẽ các phần tử trong game
+            obs.draw(surface)
+            snake.draw(surface)
+            food.draw(surface)
+            screen.blit(surface, (0, 0))
+            text = myfont.render(f"Score {score}", True, (255, 255, 0))
+            screen.blit(text, (5, 10))
+            drawGrid(surface, myfont)
 
-    clock = pygame.time.Clock()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
+            # Logic pathfinding
+            start_pos = (snake.get_head_position()[0] / GRIDSIZE, snake.get_head_position()[1] / GRIDSIZE)
+            food_pos = (food.get_position()[0] / GRIDSIZE, food.get_position()[1] / GRIDSIZE)
 
-    myfont = pygame.font.SysFont("monospace", 16)
+            # Dùng thuật toán được chọn
+            if thuattoan == 'A*':
+                path = a_star(start_pos, food_pos)
+            elif thuattoan == 'DFS':
+                path = dfs(start_pos, food_pos)
+            elif thuattoan == 'BFS':
+                path = bfs(start_pos, food_pos)
 
-    surface = pygame.Surface(screen.get_size())
-    surface = surface.convert()
-    draw_grid(surface, myfont)
+            if path is None:  # Nếu rắn bị kẹt
+                dead(score)
+                break  # Thoát khỏi vòng lặp con để restart game
 
-    snake = Snake()
-    food = Food()
+            # Di chuyển rắn dựa trên đường đi tính được
+            snake_dir = snake_directions(path).pop()
+            snake.turn(snake_dir)
+            snake.move()
 
-    while (True):
-        
-        clock.tick(10)
-        if snake.head_position() == food.get_position():
-            snake.length += 1
-            score = snake.length - 1
-            food.random_pos()
-            print("The score is {}".format(score))
-            print("NEW FOOD: (" + str(food.get_position()[0] / GRIDSIZE) + ", " + str(food.get_position()[1] / GRIDSIZE) + ")")
-
-        snake.draw(surface)
-        food.draw(surface)
-        screen.blit(surface, (0, 0))
-        screen.blit(surface, (0, 0))
-        text = myfont.render("Score {0}".format(score), 1, (255, 255, 0))
-        screen.blit(text, (5, 10))
-        
-        draw_grid(surface, myfont)
-        
-        start_pos = (snake.head_position()[0]/GRIDSIZE, snake.head_position()[1]/GRIDSIZE)
-        food_pos = (food.get_position()[0] / GRIDSIZE, food.get_position()[1]/GRIDSIZE)
-
-        # Xử lí thuật toán ở đây
-        path = dfs(start_pos, food_pos)
-        print(path)
-        snake_dir = snake_add_direction(path).pop()
-
-        snake.snake_turn(snake_dir)
-        snake.move()
-         
-        pygame.display.update()
-        for event in pygame.event.get():
-            if event.type==pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            pygame.display.update()
 
 if __name__ == "__main__":
     main()
