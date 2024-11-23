@@ -224,11 +224,9 @@ def drawGrid(surface, myfont):
                 rr = pygame.Rect((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE))
                 pygame.draw.rect(surface, (35, 39, 42), rr)
 
-
 def heuristic(node, goal_node):
         return abs(node.get_position()[0] - goal_node.get_position()[0]) + \
                abs(node.get_position()[1] - goal_node.get_position()[1])
-
 
 def a_star(start_pos, goal_pos):
     open_list = []  # Danh sách các nút cần xét
@@ -420,7 +418,6 @@ def dead(score):
     #         if event.type == pygame.MOUSEBUTTONDOWN:
     #             if button_rect.collidepoint(event.pos):
     #                 return  # Return to the main game loop
-
 
 def menu():
     white = (255, 255, 255)
