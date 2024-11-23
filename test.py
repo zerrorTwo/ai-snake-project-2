@@ -3,9 +3,11 @@ import pygame  # type: ignore
 import sys
 import random
 import heapq
+from collections import deque
 import numpy as np # type: ignore # type: ignore
 from pygame.display import update # type: ignore
 from env import *
+import math
 
 class Obstacle(object):
     def __init__(self):
@@ -53,8 +55,7 @@ class Snake(object):
         new = (((cur[0] + (x*GRIDSIZE))), (cur[1] + (y*GRIDSIZE)))
 
         if cur in obs.positions or new[0] < 0 or new[1] < 0 or new[0] >= SCREEN_WIDTH or new[1] >= SCREEN_HEIGHT:
-            print('YOU ARE DEAD')
-            dead(score)
+            dead()
 
         if (len(self.positions) > 2 and new in self.positions[2:-1]) or new[0] == -GRIDSIZE or new[1] == -GRIDSIZE or new[0] == SCREEN_WIDTH or new[1] == SCREEN_HEIGHT:
             self.reset()
@@ -224,11 +225,9 @@ def drawGrid(surface, myfont):
                 rr = pygame.Rect((x*GRIDSIZE, y*GRIDSIZE), (GRIDSIZE, GRIDSIZE))
                 pygame.draw.rect(surface, (35, 39, 42), rr)
 
-
 def heuristic(node, goal_node):
         return abs(node.get_position()[0] - goal_node.get_position()[0]) + \
                abs(node.get_position()[1] - goal_node.get_position()[1])
-
 
 def a_star(start_pos, goal_pos):
     open_list = []  # Danh sách các nút cần xét
@@ -305,11 +304,6 @@ def dfs(start_pos, goal_pos):
 
             return path[::-1]
 
-        cur_x = (start_node.get_position())[0]
-        cur_y = (start_node.get_position())[1]
-        goal_x = goal_node.get_position()[0]
-        goal_y = goal_node.get_position()[1]
-
         cur_node_neighbors = cur_node.get_neighbors()
         
 
@@ -337,7 +331,7 @@ def bfs(start_pos, goal_pos):
     open_list.append(start_node)
 
     while len(open_list) != 0:
-        current_node = open_list.pop(0)  # Lấy phần tử đầu tiên trong danh sách (thay vì phần tử cuối trong DFS)
+        current_node = open_list.pop(0)  # Lấy phần tử đ��u tiên trong danh sách (thay vì phần tử cuối trong DFS)
 
         visited.append(current_node)
         
@@ -368,6 +362,76 @@ def bfs(start_pos, goal_pos):
 
     return None
 
+# Thuật toán AC3 để tìm đường đi
+def get_domain(pos, grid_size, obstacles):
+    """Lấy miền giá trị hợp lệ cho một vị trí"""
+    domain = []
+    x, y = pos
+    for dx, dy in [UP, RIGHT, DOWN, LEFT]:
+        new_x, new_y = x + dx, y + dy
+        if (0 <= new_x < grid_size[0] and 
+            0 <= new_y < grid_size[1] and 
+            (new_x * GRIDSIZE, new_y * GRIDSIZE) not in obstacles and
+            grid[int(new_y), int(new_x)] != 1 and 
+            grid[int(new_y), int(new_x)] != 3):
+            domain.append((dx, dy))
+    return domain
+
+def ac3(start_pos, goal_pos, grid_size, obstacles):
+    """AC3 algorithm để tìm đường đi cho con rắn"""
+    # Khởi tạo các biến
+    queue = deque()
+    domains = {}
+    path = []
+    
+    # Tạo các node và miền giá trị ban đầu
+    current = Node(start_pos)
+    goal = Node(goal_pos)
+    
+    # Khởi tạo miền giá trị cho vị trí hiện tại và mục tiêu
+    domains[current] = get_domain(start_pos, grid_size, obstacles)
+    domains[goal] = get_domain(goal_pos, grid_size, obstacles)
+    
+    # Thêm các cung vào queue với cách tiếp cận tốt hơn
+    open_list = [(current, 0)]  # (node, cost)
+    visited = {current}
+    parent = {}
+    
+    while open_list:
+        current_node, current_cost = open_list.pop(0)
+        
+        if current_node.position == goal_pos:
+            # Tạo đường đi
+            path = []
+            while current_node in parent:
+                path.append(current_node.position)
+                current_node = parent[current_node]
+            path.append(start_pos)
+            return path[::-1]
+        
+        # Lấy các hướng đi hợp lệ
+        current_domain = get_domain(current_node.position, grid_size, obstacles)
+        
+        for dx, dy in current_domain:
+            next_pos = (current_node.position[0] + dx, current_node.position[1] + dy)
+            next_node = Node(next_pos)
+            
+            if next_node not in visited:
+                visited.add(next_node)
+                parent[next_node] = current_node
+                
+                # Tính khoảng cách Manhattan đến mục tiêu
+                h_cost = abs(next_pos[0] - goal_pos[0]) + abs(next_pos[1] - goal_pos[1])
+                
+                # Thêm vào open_list với priority dựa trên khoảng cách
+                insert_idx = 0
+                while (insert_idx < len(open_list) and 
+                       h_cost > abs(open_list[insert_idx][0].position[0] - goal_pos[0]) + 
+                       abs(open_list[insert_idx][0].position[1] - goal_pos[1])):
+                    insert_idx += 1
+                open_list.insert(insert_idx, (next_node, current_cost + 1))
+    
+    return None
 def reset_grid():
     global grid
     grid = np.zeros((GRID_WIDTH, GRID_HEIGHT))
@@ -378,49 +442,21 @@ reset_grid()
 directions = []
 
 def snake_directions(path):
-    if path is None:
-        dead(score)
+    if path is None or len(path) < 2:  # Thêm kiểm tra độ dài path
+        return []
     directions = []
 
     for i in range(len(path) - 1):
         direction_vector = (path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
-        directions.insert(0,direction_vector)
+        directions.insert(0, direction_vector)
     return directions
 
-def dead(score):
+def dead():
     # Reset the game state
     snake.reset()
     reset_grid()
     food.randomize_position()
-    menu()
-    # # Set up fonts and colors
-    # font = pygame.font.Font(None, 50)
-    # button_font = pygame.font.Font(None, 40)
-    # white = (255, 255, 255)
-    # red = (183, 224, 255)
-
-    # while True:
-    #     # Display the score
-    #     score_text = font.render(f"Your Score: {score}", True, white)
-    #     score_rect = score_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
-    #     screen.blit(score_text, score_rect)
-
-    #     # Display the restart button
-    #     button_text = button_font.render("Restart", True, white)
-    #     button_rect = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2), (200, 50))
-    #     pygame.draw.rect(screen, red, button_rect)
-    #     screen.blit(button_text, button_text.get_rect(center=button_rect.center))
-
-    #     pygame.display.flip()  # Update the display
-
-    #     for event in pygame.event.get():
-    #         if event.type == pygame.QUIT:
-    #             pygame.quit()
-    #             sys.exit()
-    #         if event.type == pygame.MOUSEBUTTONDOWN:
-    #             if button_rect.collidepoint(event.pos):
-    #                 return  # Return to the main game loop
-
+    return menu()
 
 def menu():
     white = (255, 255, 255)
@@ -436,7 +472,7 @@ def menu():
         pygame.draw.rect(screen, orange, button_dfs)
         screen.blit(button_text_dfs, button_text_dfs.get_rect(center=button_dfs.center))
 
-        # Tạo nút cho thuật toán DFS
+        # Tạo nút cho thuật toán BFS
         button_text_bsf = button_font.render("Thuật Toán BFS", True, white)
         button_bsf = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 -20), (200, 50))
         pygame.draw.rect(screen, orange, button_bsf)
@@ -448,6 +484,18 @@ def menu():
         pygame.draw.rect(screen, orange, button_astar)
         screen.blit(button_text_astar, button_text_astar.get_rect(center=button_astar.center))
 
+        # Tạo nút cho thuật toán A*
+        button_text_ac3 = button_font.render("Thuật Toán ac3", True, white)
+        button_ac3 = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100), (200, 50))
+        pygame.draw.rect(screen, orange, button_ac3)
+        screen.blit(button_text_ac3, button_text_ac3.get_rect(center=button_ac3.center))
+
+        # Thêm nút cho thuật toán Simulated Annealing
+        button_text_sa = button_font.render("Thuật Toán SA", True, white)
+        button_sa = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 160), (200, 50))
+        pygame.draw.rect(screen, orange, button_sa)
+        screen.blit(button_text_sa, button_text_sa.get_rect(center=button_sa.center))
+
         pygame.display.flip()  # Cập nhật màn hình
 
         # Lắng nghe sự kiện
@@ -458,15 +506,25 @@ def menu():
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if button_dfs.collidepoint(event.pos):
+                    running = False
                     thuattoan = 'DFS' # Chọn thuật toán DFS
                     return thuattoan  # Quay lại với kết quả
-                elif button_astar.collidepoint(event.pos):
-                    thuattoan = 'A*'  # Chọn thuật toán A*
-                    return thuattoan  # Quay lại với kết quả
                 elif button_bsf.collidepoint(event.pos):
+                    running = False
                     thuattoan = 'BFS'  # Chọn thuật toán BFS
                     return thuattoan  # Quay lại với kết quả
-
+                elif button_astar.collidepoint(event.pos):
+                    running = False
+                    thuattoan = 'A*'  # Chọn thuật toán A*
+                    return thuattoan  # Quay lại với kết quả
+                elif button_ac3.collidepoint(event.pos):
+                    running = False
+                    thuattoan = 'AC3'  # Chọn thuật toán BFS
+                    return thuattoan  # Quay lại với kết quả
+                elif button_sa.collidepoint(event.pos):
+                    running = False
+                    thuattoan = 'SA'  # Chọn thuật toán Simulated Annealing
+                    return thuattoan
 def pause_game():
     # Tạm dừng game và hiển thị các lựa chọn "Continue" và "Restart"
     paused = True
@@ -508,6 +566,60 @@ def pause_game():
 
         pygame.display.update()
 
+def simulated_annealing(start_pos, goal_pos):
+    """Thuật toán Simulated Annealing để tìm đường đi cho con rắn"""
+    # Các tham số cho thuật toán
+    initial_temp = 1000
+    final_temp = 1
+    alpha = 0.95  # Tốc độ làm mát
+    
+    # Tạo node bắt đầu và kết thúc
+    current = Node(start_pos)
+    goal = Node(goal_pos)
+    
+    # Khởi tạo đường đi hiện tại
+    current_path = [current]
+    best_path = current_path
+    best_cost = float('inf')
+    
+    temp = initial_temp
+    while temp > final_temp:
+        # Tạo một đường đi mới bằng cách thay đổi ng
+        current_node = current_path[-1]
+        neighbors = current_node.get_neighbors()
+        
+        if not neighbors:
+            break
+            
+        # Chọn một node láng giềng ngẫu nhiên
+        next_node = random.choice(neighbors)
+        new_path = current_path + [next_node]
+        
+        # Tính chi phí đường đi
+        current_cost = len(current_path) + heuristic(current_path[-1], goal)
+        new_cost = len(new_path) + heuristic(next_node, goal)
+        
+        # Tính xác suất chấp nhận đường đi mới
+        delta_cost = new_cost - current_cost
+        if delta_cost < 0 or random.random() < math.exp(-delta_cost / temp):
+            current_path = new_path
+            
+            # Cập nhật đường đi tốt nhất
+            if new_cost < best_cost:
+                best_path = new_path
+                best_cost = new_cost
+        
+        # Kiểm tra nếu đã đến đích
+        if next_node == goal:
+            return [node.position for node in best_path]
+            
+        # Giảm nhiệt độ
+        temp *= alpha
+    
+    # Trả về đường đi tốt nhất tìm được
+    if best_path:
+        return [node.position for node in best_path]
+    return None
 def main():
     global score, food, snake, surface, screen, obs
     pygame.init()
@@ -520,7 +632,6 @@ def main():
 
     # Hiển thị menu và chọn thuật toán
     thuattoan = menu()
-
     while True:
         # Khởi tạo trạng thái game
         obs = Obstacle()
@@ -534,11 +645,8 @@ def main():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                # Kiểm tra sự kiện phím ESC để tạm dừng game
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     result = pause_game()  # Dừng game và hiển thị menu
-
-                    # Kiểm tra nếu người chơi chọn "Restart"
                     if result == 'restart':
                         thuattoan = menu()  # Quay lại menu chính để chọn lại thuật toán
                         break  # Thoát khỏi vòng lặp game và quay lại menu chính
@@ -569,17 +677,26 @@ def main():
                 path = dfs(start_pos, food_pos)
             elif thuattoan == 'BFS':
                 path = bfs(start_pos, food_pos)
+            elif thuattoan == 'AC3':
+                path = ac3(start_pos, food_pos, (GRID_WIDTH, GRID_HEIGHT), obs.positions)
+            elif thuattoan == 'SA':
+                path = simulated_annealing(start_pos, food_pos)
 
-            if path is None:  # Nếu rắn bị kẹt
-                dead(score)
-                break  # Thoát khỏi vòng lặp con để restart game
+            if path is None or len(path) < 2:  # Thêm kiểm tra path
+                thuattoan = dead()
+                break
 
-            # Di chuyển rắn dựa trên đường đi tính được
-            snake_dir = snake_directions(path).pop()
+            directions = snake_directions(path)
+            if not directions:  # Kiểm tra danh sách directions có trống không
+                thuattoan = dead()
+                break
+            
+            snake_dir = directions.pop()
             snake.turn(snake_dir)
             snake.move()
 
             pygame.display.update()
+
 
 if __name__ == "__main__":
     main()
