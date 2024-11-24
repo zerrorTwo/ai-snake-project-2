@@ -14,11 +14,11 @@ class Menu:
             'A*': "Thuật Toán A*",
             'AC3': "Thuật Toán AC3",
             'SA': "Thuật Toán SA",
-            'COMPARE': "So Sánh Các Thuật Toán"
+            'COMPARE': "So Sánh"
         }
 
         buttons = {}
-        y_offset = SCREEN_HEIGHT // 2 - 80
+        y_offset = SCREEN_HEIGHT // 2 - 120
 
         running = True
         while running:
@@ -49,7 +49,7 @@ class Menu:
                         if button.collidepoint(event.pos):
                             return algo
 
-            y_offset = SCREEN_HEIGHT // 2 - 80
+            y_offset = SCREEN_HEIGHT // 2 - 120
 
     @staticmethod
     def show_pause_menu(screen):

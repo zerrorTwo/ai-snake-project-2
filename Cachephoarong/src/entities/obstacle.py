@@ -2,7 +2,6 @@ import pygame
 import random
 from ..constants import *
 
-
 class Obstacle:
     def __init__(self):
         self.positions = []
@@ -10,20 +9,18 @@ class Obstacle:
         self.randomize_positions()
 
     def randomize_positions(self):
-        """Tạo vị trí ngẫu nhiên cho chướng ngại vật"""
         self.positions = []
-        for _ in range(0):  # Số lượng chướng ngại vật
+        for _ in range(0):  # số lượng vật cản
             while True:
                 x = random.randint(0, GRID_WIDTH - 1) * GRIDSIZE
                 y = random.randint(0, GRID_HEIGHT - 1) * GRIDSIZE
 
-                # Kiểm tra không đặt chướng ngại vật ở vị trí bắt đầu của rắn
+                # Kiểm tra chỗ đặt vật cản
                 if (x, y) != (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2):
                     self.positions.append((x, y))
                     break
 
     def draw(self, surface):
-        """Vẽ chướng ngại vật"""
         for pos in self.positions:
             r = pygame.Rect((pos[0], pos[1]), (GRIDSIZE, GRIDSIZE))
             pygame.draw.rect(surface, self.color, r)

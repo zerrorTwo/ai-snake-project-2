@@ -2,16 +2,13 @@ import pygame
 import random
 from ..constants import *
 
-
 class Food:
     def __init__(self):
         self.position = (0, 0)
         self.color = FOOD_COLOR
-        # Không gọi randomize_position trong __init__ nữa
 
     def randomize_position(self, grid, snake_positions, obstacles):
-        """Tạo vị trí ngẫu nhiên cho thức ăn"""
-        if self.position != (0, 0):  # Chỉ xóa vị trí cũ nếu không phải vị trí mặc định
+        if self.position != (0, 0):  # Chỉ xóa vị trí cũ nếu không phải vị trí khởi đầu
             grid[int(self.position[1] / GRIDSIZE)][int(self.position[0] / GRIDSIZE)] = EMPTY
 
         while True:

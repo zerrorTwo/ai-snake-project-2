@@ -25,42 +25,38 @@ class Game:
         self.display_game = display_game
 
         self.reset_game()
-        self.previous_moves = []  # Lưu các bước di chuyển gần nhất
-        self.max_moves_without_food = 100  # Giới hạn số bước không ăn được thức ăn
-        self.moves_without_food = 0  # Đếm số bước không ăn được thức ��n
 
+    # Hàm dùng để reset game
     def reset_game(self):
-        """Khởi tạo lại game"""
         self.grid = init_grid()
         self.snake = Snake()
         self.obstacles = Obstacle()
         self.food = Food()
-        self.food.randomize_position(self.grid, self.snake.positions, self.obstacles.positions)
+        self.food.randomize_position(
+            self.grid, self.snake.positions, self.obstacles.positions
+        )
         self.score = 0
 
-    def run(self, network=None):
-        """Chạy game loop chính"""
+    # Hàm để khởi động game, game có 2 chế độ là thuật toán và trai, ai là chế độ train
+    def run(self, net=None):
         if self.ai_mode and self.display_game:
             running = True
             while running:
                 self.clock.tick(FPS)
                 if not self.handle_events():
                     break
-                if not self.update(algorithm='AI', network=network):
+                if not self.update(algorithm="AI", network=net):
                     break
                 self.draw()
             return self.score
-        
+
         while True:
             algorithm = Menu.show_main_menu(self.screen)
-            
-            if algorithm == 'COMPARE':
-                print("So sánh hiệu suất các thuật toán...")
+            if algorithm == "COMPARE":
+                print("So sánh hiệu suất...")
                 self.compare_algorithms()
                 continue
-                
             self.reset_game()
-            
             running = True
             while running:
                 self.clock.tick(FPS)
@@ -70,24 +66,20 @@ class Game:
                     break
                 self.draw()
 
+    # Hàm dùng để vẽ có object
     def draw(self):
-        """Vẽ game"""
         self.surface.fill(BLACK)
         draw_grid(self.surface)
-
         self.obstacles.draw(self.surface)
         self.snake.draw(self.surface)
         self.food.draw(self.surface)
-
         self.screen.blit(self.surface, (0, 0))
-
         score_text = self.font.render(f"Score {self.score}", True, (255, 255, 0))
         self.screen.blit(score_text, (5, 10))
-
         pygame.display.update()
 
+    # Hàm xử lí out game và pause game
     def handle_events(self):
-        """Xử lý các sự kiện"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -97,10 +89,9 @@ class Game:
                     return self.pause_game()
         return True
 
+    # Hàm dùng để dừng game tạm thời
     def pause_game(self):
-        """Xử lý tạm dừng game"""
-        continue_button, restart_button = Menu.show_pause_menu(self.screen)
-
+        btn_continue, btn_restart = Menu.show_pause_menu(self.screen)
         paused = True
         while paused:
             for event in pygame.event.get():
@@ -111,188 +102,172 @@ class Game:
                     return True
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if continue_button.collidepoint(event.pos):
+                    if btn_continue.collidepoint(event.pos):
                         return True
-                    elif restart_button.collidepoint(event.pos):
+                    elif btn_restart.collidepoint(event.pos):
                         return False
         return True
 
     def update(self, algorithm=None, network=None):
-        """Cập nhật trạng thái game"""
-        # Nếu đang chạy chế độ AI
         if self.ai_mode and network:
-            # TODO: Thêm logic để lấy input state và sử dụng neural network
-            # Ví dụ:
-            state = self.get_state()  # Cần thêm hàm này
+            state = self.get_state()
             output = network.forward(state)
-            direction = self.get_direction_from_output(output)  # Cần thêm hàm này
-            
-            # Di chuyển rắn theo hướng đã chọn
+            direction = self.get_direct(output)
+
+            # Di chuyển theo hướng thuật toán đã chọn
             self.snake.turn(direction)
             if not self.snake.move(self.grid, self.obstacles.positions):
                 return False
-            
-        else:  # Chế độ thuật toán tìm đường
-            # Lấy vị trí hiện tại và đích
-            start_pos = (self.snake.get_head_position()[0] / GRIDSIZE,
-                        self.snake.get_head_position()[1] / GRIDSIZE)
-            goal_pos = (self.food.position[0] / GRIDSIZE,
-                       self.food.position[1] / GRIDSIZE)
+
+        else:
+            # Lấy vị trí hiện tại là cái đầu con rắn
+            start_pos = (
+                self.snake.get_head_position()[0] / GRIDSIZE,
+                self.snake.get_head_position()[1] / GRIDSIZE,
+            )
+            # Lấy vị trí đích là thức ăn
+            goal_pos = (
+                self.food.position[0] / GRIDSIZE,
+                self.food.position[1] / GRIDSIZE,
+            )
 
             # Tìm đường đi theo thuật toán được chọn
             path = None
-            if algorithm == 'A*':
-                path = astar.a_star(start_pos, goal_pos, self.grid, self.obstacles.positions)
-            elif algorithm == 'BFS':
+            if algorithm == "A*":
+                path = astar.a_star(
+                    start_pos, goal_pos, self.grid, self.obstacles.positions
+                )
+            elif algorithm == "BFS":
                 path = bfs.bfs(start_pos, goal_pos, self.grid, self.obstacles.positions)
-            elif algorithm == 'AC3':
-                path = ac3.ac3(start_pos, goal_pos, (GRID_WIDTH, GRID_HEIGHT),
-                              self.obstacles.positions, self.grid)
-            elif algorithm == 'SA':
-                path = simulated_annealing.simulated_annealing(start_pos, goal_pos,
-                                                               self.grid, self.obstacles.positions)
+            elif algorithm == "AC3":
+                path = ac3.ac3(
+                    start_pos,
+                    goal_pos,
+                    (GRID_WIDTH, GRID_HEIGHT),
+                    self.obstacles.positions,
+                    self.grid,
+                )
+            elif algorithm == "SA":
+                path = simulated_annealing.simulated_annealing(
+                    start_pos, goal_pos, self.grid, self.obstacles.positions
+                )
 
             if path is None or len(path) < 2:
                 return False
 
             # Tính hướng di chuyển từ đường đi
             next_pos = path[1]
-            direction = (
-                next_pos[0] - start_pos[0],
-                next_pos[1] - start_pos[1]
-            )
+            direction = (next_pos[0] - start_pos[0], next_pos[1] - start_pos[1])
 
-            # Di chuyển rắn
+            # Di chuyển rắn theo hướng đã tính toán
             self.snake.turn(direction)
             if not self.snake.move(self.grid, self.obstacles.positions):
                 return False
 
-        # Kiểm tra ăn thức ăn
+        # Hàm dùng để kiểm tra đó có phải là thức ăn không, nếu phải thì độ dài con rắn tăng 1 và score tăng 1
         if self.snake.get_head_position() == self.food.position:
             self.snake.length += 1
             self.score = self.snake.length - 1
-            self.food.randomize_position(self.grid, self.snake.positions,
-                                       self.obstacles.positions)
-
+            self.food.randomize_position(
+                self.grid, self.snake.positions, self.obstacles.positions
+            )
         return True
 
     def get_state(self):
-        """Lấy trạng thái hiện tại của game cho neural network"""
-        # TODO: Implement state extraction
-        # Ví dụ đơn giản:
-        head_x, head_y = self.snake.get_head_position()
-        food_x, food_y = self.food.position
-        
-        # Tạo vector 24 chiều chứa thông tin về:
-        # - Vị trí tương đối của thức ăn
-        # - Các chướng ngại vật xung quanh
-        # - Hướng di chuyển hiện tại
-        # - Vị trí thân rắn
         state = np.zeros(24)
-        # ... điền thông tin vào state ...
-        
-        return state.reshape(1, -1)  # Reshape để phù hợp với neural network
+        return state.reshape(1, -1)
 
-    def get_direction_from_output(self, output):
-        """Chuyển đổi output của neural network thành hướng di chuyển"""
-        # output là một mảng 4 chiều [lên, phải, xuống, trái]
+    def get_direct(self, output):
         direction_idx = np.argmax(output)
-        
-        # Chuyển đổi index thành hướng di chuyển
-        directions = [
-            (0, -1),  # lên
-            (1, 0),   # phải
-            (0, 1),   # xuống
-            (-1, 0)   # trái
-        ]
-        
+        directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
         return directions[direction_idx]
 
     def run_ai_mode(self, network):
-        """Chạy game trong chế độ AI training"""
         self.reset_game()
         running = True
         while running:
             self.clock.tick(FPS_AI)
-            
-            # Xử lý các sự kiện cơ bản như thoát game
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-            
-            # Cập nhật và vẽ game
-            if not self.update(algorithm='AI', network=network):
+
+            if not self.update(algorithm="AI", network=network):
                 break
-            self.draw()  # Thêm vào để hiển thị giao diện
+            self.draw()
 
         return self.score
 
+    # Hàm để so sánh các chỉ số
     def compare_algorithms(self):
-        """So sánh hiệu suất của các thuật toán"""
-        algorithms = ['BFS', 'A*', 'AC3', 'SA']
-        runs_per_algorithm = 20
+        # Các thuật toán dùng để so sánh
+        algorithms = ["BFS", "A*", "AC3", "SA"]
+        # Số lần để so sánh
+        num_of_algo = 10
+        # tạo một defaultlist để lưu các chỉ số cần thiết
+
         stats = defaultdict(lambda: defaultdict(list))
-        
-        for algo in algorithms:
-            for _ in range(runs_per_algorithm):
+        #      stats = {
+        #     'AC3': {
+        #         'scores': [],  # danh sách điểm số
+        #         'moves': [],   # danh sách số bước di chuyển
+        #         'time': []     # danh sách thời gian thực thi
+        #     },
+        # }
+        for i in algorithms:
+            for _ in range(num_of_algo):
                 self.reset_game()
-                score, moves, time_taken = self.run_algorithm(algo)
-                stats[algo]['scores'].append(score)
-                stats[algo]['moves'].append(moves)
-                stats[algo]['time'].append(time_taken)
-        
-        # Tạo một đồ thị duy nhất với 3 subplot
+                score, moves, time_taken = self.run_algorithm(i)
+                stats[i]["scores"].append(score)
+                stats[i]["moves"].append(moves)
+                stats[i]["time"].append(time_taken)
+
+        # Tạo một đồ thị với 3 bảng
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
-        fig.suptitle('So sánh hiệu suất các thuật toán')
-        
-        # Vẽ line plot cho từng metric
+        fig.suptitle("Hiệu suất các thuật toán")
+
+        # Vẽ
         metrics = {
-            'scores': ('Điểm số', ax1),
-            'moves': ('Số bước di chuyển', ax2),
-            'time': ('Thời gian thực thi (giây)', ax3)
+            "scores": ("Điểm số", ax1),
+            "moves": ("Số bước di chuyển", ax2),
+            "time": ("Thời gian thực thi (giây)", ax3),
         }
-        
+
         for metric, (ylabel, ax) in metrics.items():
-            # Vẽ đường cho từng thuật toán
+            # Vẽ các đường cho từng thuật toán
             for algo in algorithms:
                 values = stats[algo][metric]
                 runs = range(1, len(values) + 1)
-                ax.plot(runs, values, marker='o', label=algo)
-            
-            ax.set_xlabel('Lần chạy')
+                ax.plot(runs, values, marker="o", label=algo)
+
+            ax.set_xlabel("Lần chạy")
             ax.set_ylabel(ylabel)
             ax.grid(True)
             ax.legend()
-        
+
         plt.tight_layout()
         plt.show()
 
-    def run_algorithm(self, algorithm):
-        """Chạy một thuật toán và trả về các chỉ số hiệu suất"""
+    # Hàm dùng để chạy thuật toán và đánh giá
+    def run_algorithm(self, algo):
         import time
-        
         start_time = time.time()
         moves = 0
         self.reset_game()
-        
         running = True
-        while running and moves < 1000:  # Giới hạn số bước tối đa
-            # Cập nhật trạng thái game
-            if not self.update(algorithm=algorithm):
+        while running:  
+            if not self.update(algorithm=algo):
                 break
             moves += 1
-            
-            # Nếu hiển thị game
+            # nếu tham số display game là true thì sẽ hiện UI
             if self.display_game:
                 self.draw()
-                self.clock.tick(FPS)
-                
-                # Xử lý sự kiện thoát
+                self.clock.tick(200)
+
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
-        
         time_taken = time.time() - start_time
         return self.score, moves, time_taken

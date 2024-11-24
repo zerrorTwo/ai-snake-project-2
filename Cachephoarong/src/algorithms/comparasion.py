@@ -9,7 +9,7 @@ def compare_algorithms(start_pos, goal_pos, grid, obstacles, grid_size, num_runs
     algorithms = {
         'A*': a_star,
         'BFS': bfs,
-        'AC3': lambda s, g, gr, o: ac3(s, g, grid_size, o, gr),
+        'AC3': ac3,
         'SA': simulated_annealing
     }
     
@@ -18,7 +18,7 @@ def compare_algorithms(start_pos, goal_pos, grid, obstacles, grid_size, num_runs
         'path_length': {}
     }
 
-    for algo_name, algo_func in algorithms.items():
+    for name_algorithm, algo_func in algorithms.items():
         times = []
         lengths = []
         
@@ -33,8 +33,8 @@ def compare_algorithms(start_pos, goal_pos, grid, obstacles, grid_size, num_runs
             times.append(execution_time)
             lengths.append(path_length)
         
-        results['execution_time'][algo_name] = sum(times) / len(times)
-        results['path_length'][algo_name] = sum(lengths) / len(lengths)
+        results['execution_time'][name_algorithm] = sum(times) / len(times)
+        results['path_length'][name_algorithm] = sum(lengths) / len(lengths)
     
     return results
 

@@ -1,21 +1,20 @@
-import heapq
+import heapq 
 from .node import Node
 from ..constants import *
 
-
+# Hàm tính khoảng cách bằng Manhattan
 def heuristic(node, goal_node):
-    """Tính khoảng cách Manhattan"""
     return abs(node.position[0] - goal_node.position[0]) + \
         abs(node.position[1] - goal_node.position[1])
 
-
 def a_star(start_pos, goal_pos, grid, obstacles):
-    open_list = []
-    visited = []
+    open_list = [] # danh sách nút có thể đi
+    visited = [] # danh sách nút đã đi
 
     start_node = Node(start_pos)
     goal_node = Node(goal_pos)
 
+    # Dùng heapq để có thể lấy các đường có cost nhỏ nhất
     heapq.heappush(open_list, (0 + heuristic(start_node, goal_node), start_node))
 
     g_costs = {start_node: 0}

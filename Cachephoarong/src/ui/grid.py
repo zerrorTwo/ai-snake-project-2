@@ -2,7 +2,6 @@ import pygame
 from ..constants import *
 
 def draw_grid(surface):
-    """Vẽ lưới game"""
     for y in range(0, int(GRID_HEIGHT)):
         for x in range(0, int(GRID_WIDTH)):
             if (x + y) % 2 == 0:
