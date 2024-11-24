@@ -14,6 +14,7 @@ class Menu:
             'A*': "Thuật Toán A*",
             'AC3': "Thuật Toán AC3",
             'SA': "Thuật Toán SA",
+            'COMPARE': "So Sánh Các Thuật Toán"
         }
 
         buttons = {}

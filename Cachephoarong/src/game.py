@@ -8,6 +8,8 @@ from .entities.obstacle import Obstacle
 from .ui.menu import Menu
 from .ui.grid import draw_grid
 from .algorithms import astar, bfs, ac3, simulated_annealing
+import matplotlib.pyplot as plt
+from collections import defaultdict
 
 
 class Game:
@@ -25,7 +27,7 @@ class Game:
         self.reset_game()
         self.previous_moves = []  # Lưu các bước di chuyển gần nhất
         self.max_moves_without_food = 100  # Giới hạn số bước không ăn được thức ăn
-        self.moves_without_food = 0  # Đếm số bước không ăn được thức ăn
+        self.moves_without_food = 0  # Đếm số bước không ăn được thức ��n
 
     def reset_game(self):
         """Khởi tạo lại game"""
@@ -51,6 +53,12 @@ class Game:
         
         while True:
             algorithm = Menu.show_main_menu(self.screen)
+            
+            if algorithm == 'COMPARE':
+                print("So sánh hiệu suất các thuật toán...")
+                self.compare_algorithms()
+                continue
+                
             self.reset_game()
             
             running = True
@@ -219,3 +227,72 @@ class Game:
             self.draw()  # Thêm vào để hiển thị giao diện
 
         return self.score
+
+    def compare_algorithms(self):
+        """So sánh hiệu suất của các thuật toán"""
+        algorithms = ['BFS', 'A*', 'AC3', 'SA']
+        runs_per_algorithm = 20
+        stats = defaultdict(lambda: defaultdict(list))
+        
+        for algo in algorithms:
+            for _ in range(runs_per_algorithm):
+                self.reset_game()
+                score, moves, time_taken = self.run_algorithm(algo)
+                stats[algo]['scores'].append(score)
+                stats[algo]['moves'].append(moves)
+                stats[algo]['time'].append(time_taken)
+        
+        # Tạo một đồ thị duy nhất với 3 subplot
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle('So sánh hiệu suất các thuật toán')
+        
+        # Vẽ line plot cho từng metric
+        metrics = {
+            'scores': ('Điểm số', ax1),
+            'moves': ('Số bước di chuyển', ax2),
+            'time': ('Thời gian thực thi (giây)', ax3)
+        }
+        
+        for metric, (ylabel, ax) in metrics.items():
+            # Vẽ đường cho từng thuật toán
+            for algo in algorithms:
+                values = stats[algo][metric]
+                runs = range(1, len(values) + 1)
+                ax.plot(runs, values, marker='o', label=algo)
+            
+            ax.set_xlabel('Lần chạy')
+            ax.set_ylabel(ylabel)
+            ax.grid(True)
+            ax.legend()
+        
+        plt.tight_layout()
+        plt.show()
+
+    def run_algorithm(self, algorithm):
+        """Chạy một thuật toán và trả về các chỉ số hiệu suất"""
+        import time
+        
+        start_time = time.time()
+        moves = 0
+        self.reset_game()
+        
+        running = True
+        while running and moves < 1000:  # Giới hạn số bước tối đa
+            # Cập nhật trạng thái game
+            if not self.update(algorithm=algorithm):
+                break
+            moves += 1
+            
+            # Nếu hiển thị game
+            if self.display_game:
+                self.draw()
+                self.clock.tick(FPS)
+                
+                # Xử lý sự kiện thoát
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+        
+        time_taken = time.time() - start_time
+        return self.score, moves, time_taken
