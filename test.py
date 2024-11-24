@@ -331,7 +331,7 @@ def bfs(start_pos, goal_pos):
     open_list.append(start_node)
 
     while len(open_list) != 0:
-        current_node = open_list.pop(0)  # Lấy phần tử đ��u tiên trong danh sách (thay vì phần tử cuối trong DFS)
+        current_node = open_list.pop(0)  # Lấy phần tử đu tiên trong danh sách (thay vì phần tử cuối trong DFS)
 
         visited.append(current_node)
         
@@ -384,7 +384,7 @@ def ac3(start_pos, goal_pos, grid_size, obstacles):
     domains = {}
     path = []
     
-    # Tạo các node và miền giá trị ban đầu
+    # Tạo các node và miền giá trị ban ầu
     current = Node(start_pos)
     goal = Node(goal_pos)
     
@@ -484,7 +484,7 @@ def menu():
         pygame.draw.rect(screen, orange, button_astar)
         screen.blit(button_text_astar, button_text_astar.get_rect(center=button_astar.center))
 
-        # Tạo nút cho thuật toán A*
+        # Tạo nút cho thuật toán AC3
         button_text_ac3 = button_font.render("Thuật Toán ac3", True, white)
         button_ac3 = pygame.Rect((SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100), (200, 50))
         pygame.draw.rect(screen, orange, button_ac3)
@@ -519,12 +519,13 @@ def menu():
                     return thuattoan  # Quay lại với kết quả
                 elif button_ac3.collidepoint(event.pos):
                     running = False
-                    thuattoan = 'AC3'  # Chọn thuật toán BFS
+                    thuattoan = 'AC3'  # Chọn thuật toán AC3
                     return thuattoan  # Quay lại với kết quả
                 elif button_sa.collidepoint(event.pos):
                     running = False
                     thuattoan = 'SA'  # Chọn thuật toán Simulated Annealing
                     return thuattoan
+
 def pause_game():
     # Tạm dừng game và hiển thị các lựa chọn "Continue" và "Restart"
     paused = True
@@ -542,7 +543,7 @@ def pause_game():
                     paused = False  # Tiếp tục game khi chọn "Continue"
                 elif restart_button.collidepoint(event.pos):
                     paused = False  # Quay lại menu khi chọn "Restart"
-                    screen.fill((255, 246, 233))  # Làm sạch màn hình trước khi quay lại menu
+                    screen.fill((255, 246, 233))  # Làm sạch màn hình trớc khi quay lại menu
                     pygame.display.update()  # Cập nhật màn hình
                     return 'restart'  # Quay lại menu
 
@@ -621,7 +622,7 @@ def simulated_annealing(start_pos, goal_pos):
         return [node.position for node in best_path]
     return None
 def main():
-    global score, food, snake, surface, screen, obs
+    global score, food, snake, surface, screen, obs, clock
     pygame.init()
     pygame.display.set_caption("Cá chép hoá rồng!!")
     clock = pygame.time.Clock()
@@ -632,6 +633,7 @@ def main():
 
     # Hiển thị menu và chọn thuật toán
     thuattoan = menu()
+    
     while True:
         # Khởi tạo trạng thái game
         obs = Obstacle()
@@ -696,7 +698,6 @@ def main():
             snake.move()
 
             pygame.display.update()
-
 
 if __name__ == "__main__":
     main()
